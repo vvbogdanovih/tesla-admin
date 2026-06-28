@@ -43,6 +43,10 @@ export const API_URLS = {
 		BASE: `/users`,
 		BY_ID: (id: string) => `/users/${id}`
 	},
+	CONTENT_BLOCKS: {
+		BASE: `/content-blocks`,
+		BY_KEY: (key: string) => `/content-blocks/${key}`
+	},
 	UPLOAD: {
 		IMAGE: `/s3/upload`,
 		PRESIGN: `/s3/presign`

@@ -1,12 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { NAV_ITEMS } from '@/common/constants/ui-routes.constants'
+import { usePathname, useRouter } from 'next/navigation'
+import { LogOut } from 'lucide-react'
+import { NAV_ITEMS, UI_ROUTES } from '@/common/constants'
+import { useAuthStore } from '@/common/store/useAuthStore'
 import { cn } from '@/common/utils/shad-cn.utils'
 
 export const Sidebar = () => {
 	const pathname = usePathname()
+	const router = useRouter()
+	const user = useAuthStore(s => s.user)
+	const logOut = useAuthStore(s => s.logOut)
+	const initial = (user?.firstName || user?.email || 'A').charAt(0).toUpperCase()
+
+	const handleLogout = async () => {
+		await logOut()
+		router.replace(UI_ROUTES.LOGIN)
+	}
 
 	return (
 		<aside className='border-border bg-card sticky top-0 flex h-screen w-60 flex-col border-r p-3'>
@@ -16,6 +27,7 @@ export const Sidebar = () => {
 					ADMIN
 				</span>
 			</div>
+
 			<nav className='flex flex-1 flex-col gap-1 overflow-auto'>
 				{NAV_ITEMS.map(({ label, href, icon: Icon }) => {
 					const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
@@ -25,9 +37,7 @@ export const Sidebar = () => {
 							href={href}
 							className={cn(
 								'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
-								active
-									? 'bg-primary/10 text-accent-text'
-									: 'text-foreground hover:bg-muted'
+								active ? 'bg-primary/10 text-accent-text' : 'text-foreground hover:bg-muted'
 							)}
 						>
 							<Icon className='h-[18px] w-[18px]' />
@@ -36,6 +46,26 @@ export const Sidebar = () => {
 					)
 				})}
 			</nav>
+
+			{/* Користувач + вихід */}
+			<div className='border-border mt-2 flex items-center gap-2 border-t pt-3'>
+				<div className='bg-primary text-primary-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-extrabold'>
+					{initial}
+				</div>
+				<div className='min-w-0 flex-1'>
+					<div className='truncate text-sm font-semibold'>
+						{user?.firstName || user?.email || 'Admin'}
+					</div>
+					<div className='text-muted-foreground text-xs'>{user?.role}</div>
+				</div>
+				<button
+					onClick={handleLogout}
+					title='Вийти'
+					className='border-border text-muted-foreground hover:text-accent-text flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors'
+				>
+					<LogOut className='h-[18px] w-[18px]' />
+				</button>
+			</div>
 		</aside>
 	)
 }

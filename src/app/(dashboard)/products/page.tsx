@@ -97,17 +97,17 @@ export default function ProductsPage() {
 									<td className='text-muted-foreground px-4 py-3'>{p.category?.name ?? '—'}</td>
 									<td className='px-4 py-3'>
 										<span className='font-medium'>{money(p.price)}</span>
-										{p.oldPrice && (
+										{p.onSale && p.oldPrice && (
 											<span className='text-muted-foreground ml-1 text-xs line-through'>
 												{money(p.oldPrice)}
 											</span>
 										)}
 									</td>
 									<td className='px-4 py-3'>
-										{p.inStock ? (
+										{p.stockQty > 0 ? (
 											<span className='text-green-600'>{p.stockQty} шт</span>
 										) : (
-											<span className='text-muted-foreground'>під замовлення</span>
+											<span className='text-destructive'>Немає</span>
 										)}
 									</td>
 									<td className='px-4 py-3'>

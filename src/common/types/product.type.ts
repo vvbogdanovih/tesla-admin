@@ -17,9 +17,9 @@ export interface ProductListItem {
 	slug: string
 	price: string
 	oldPrice: string | null
+	onSale: boolean
 	type: ProductType
 	condition: ProductCondition
-	inStock: boolean
 	stockQty: number
 	isActive: boolean
 	category?: { id: string; name: string } | null
@@ -36,8 +36,6 @@ export interface ProductDetail extends ProductListItem {
 	attributes: Record<string, string>
 	descriptionJson: JSONContent | null
 	descriptionHtml: string | null
-	warranty: string | null
-	deliveryTerms: string | null
 	seo?: { title?: string; description?: string }
 	fitment: ProductFitment[]
 }

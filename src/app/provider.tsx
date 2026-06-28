@@ -24,7 +24,29 @@ export const Providers = ({ children }: PropsWithChildren) => {
 
 	return (
 		<QueryClientProvider client={client}>
-			<Toaster position='top-right' />
+			<Toaster
+				position='top-center'
+				toastOptions={{
+					duration: 4000,
+					style: {
+						background: 'var(--card)',
+						color: 'var(--card-foreground)',
+						border: '1px solid var(--border)',
+						borderRadius: 'var(--radius-xl)',
+						padding: '12px 16px',
+						fontSize: '14px',
+						fontWeight: 500,
+						boxShadow: '0 12px 32px -12px rgba(0,0,0,0.35)',
+						maxWidth: '420px'
+					},
+					success: {
+						iconTheme: { primary: 'var(--primary)', secondary: 'var(--primary-foreground)' }
+					},
+					error: {
+						iconTheme: { primary: 'var(--destructive)', secondary: 'var(--card)' }
+					}
+				}}
+			/>
 			{ready ? children : <FullScreenLoader />}
 		</QueryClientProvider>
 	)

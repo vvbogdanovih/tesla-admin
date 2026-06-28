@@ -14,13 +14,11 @@ export interface ProductPayload {
 	categoryId: string
 	price: number
 	oldPrice?: number
+	onSale?: boolean
 	type: ProductType
 	condition: ProductCondition
-	inStock: boolean
 	stockQty: number
 	descriptionJson?: JSONContent | null
-	warranty?: string
-	deliveryTerms?: string
 	attributes?: Record<string, string>
 	seo?: { title?: string; description?: string }
 	images?: { url: string; alt?: string }[]
