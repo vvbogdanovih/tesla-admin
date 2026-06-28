@@ -44,6 +44,7 @@ export const API_URLS = {
 		BY_ID: (id: string) => `/users/${id}`
 	},
 	UPLOAD: {
-		PRESIGN: `/upload/presign`
+		IMAGE: `/s3/upload`,
+		PRESIGN: `/s3/presign`
 	}
 }

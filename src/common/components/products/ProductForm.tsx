@@ -1,0 +1,406 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import type { JSONContent } from '@tiptap/core'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { ArrowDown, ArrowUp, ImageIcon, Loader2, Plus, Trash2, X } from 'lucide-react'
+import { Button, InfoHint, Input, RichTextEditor, Select, Textarea } from '@/common/components'
+import { carsApi } from '@/common/services/cars.api'
+import { categoriesApi } from '@/common/services/categories.api'
+import { productsApi, type ProductPayload } from '@/common/services/products.api'
+import { uploadImage } from '@/common/services/upload.service'
+import { productSchema, type ProductValues } from '@/common/schemas/product.schema'
+import { slugify } from '@/common/utils/slugify'
+import { UI_ROUTES } from '@/common/constants'
+import type { ProductDetail, ProductImage } from '@/common/types/product.type'
+
+interface AttrRow {
+	key: string
+	value: string
+}
+
+export const ProductForm = ({ product }: { product?: ProductDetail }) => {
+	const router = useRouter()
+	const qc = useQueryClient()
+	const isEdit = !!product
+
+	const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: categoriesApi.list })
+	const { data: cars } = useQuery({ queryKey: ['cars'], queryFn: carsApi.list })
+
+	const form = useForm<ProductValues>({
+		resolver: zodResolver(productSchema),
+		defaultValues: {
+			name: product?.name ?? '',
+			sku: product?.sku ?? '',
+			categoryId: product?.category?.id ?? '',
+			price: product ? Number(product.price) : 0,
+			oldPrice: product?.oldPrice ? Number(product.oldPrice) : undefined,
+			type: product?.type ?? 'original',
+			condition: product?.condition ?? 'new',
+			inStock: product?.inStock ?? true,
+			isActive: product?.isActive ?? true,
+			stockQty: product?.stockQty ?? 0,
+			warranty: product?.warranty ?? '',
+			deliveryTerms: product?.deliveryTerms ?? '',
+			seoTitle: product?.seo?.title ?? '',
+			seoDescription: product?.seo?.description ?? ''
+		}
+	})
+
+	const [images, setImages] = useState<ProductImage[]>(product?.images ?? [])
+	const [carIds, setCarIds] = useState<string[]>(product?.fitment.map(f => f.carId) ?? [])
+	const [descJson, setDescJson] = useState<JSONContent | null>(product?.descriptionJson ?? null)
+	const [attrs, setAttrs] = useState<AttrRow[]>(
+		product ? Object.entries(product.attributes).map(([key, value]) => ({ key, value })) : []
+	)
+	const [uploading, setUploading] = useState(false)
+
+	const nameValue = form.watch('name')
+	const slugPreview = isEdit ? product!.slug : slugify(nameValue || '')
+
+	const save = useMutation({
+		mutationFn: (v: ProductValues) => {
+			const attributes: Record<string, string> = {}
+			for (const { key, value } of attrs) {
+				const k = key.trim()
+				if (k) attributes[k] = value.trim()
+			}
+			const payload: ProductPayload = {
+				name: v.name,
+				sku: v.sku,
+				categoryId: v.categoryId,
+				price: v.price,
+				oldPrice: v.oldPrice && v.oldPrice > 0 ? v.oldPrice : undefined,
+				type: v.type,
+				condition: v.condition,
+				inStock: v.inStock,
+				stockQty: v.stockQty,
+				descriptionJson: descJson,
+				warranty: v.warranty?.trim() || undefined,
+				deliveryTerms: v.deliveryTerms?.trim() || undefined,
+				attributes,
+				seo: {
+					title: v.seoTitle?.trim() || undefined,
+					description: v.seoDescription?.trim() || undefined
+				},
+				images: images.map(i => ({ url: i.url, alt: i.alt ?? undefined })),
+				carIds,
+				isActive: v.isActive
+			}
+			return isEdit ? productsApi.update(product!.id, payload) : productsApi.create(payload)
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['products'] })
+			toast.success(isEdit ? 'Товар оновлено' : 'Товар створено')
+			router.push(UI_ROUTES.PRODUCTS)
+		}
+	})
+
+	const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files ?? [])
+		if (!files.length) return
+		setUploading(true)
+		try {
+			for (const file of files) {
+				const url = await uploadImage(file, 'products')
+				setImages(prev => [...prev, { url, alt: '' }])
+			}
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Помилка завантаження')
+		} finally {
+			setUploading(false)
+			e.target.value = ''
+		}
+	}
+
+	const moveImage = (i: number, dir: -1 | 1) => {
+		setImages(prev => {
+			const next = [...prev]
+			const j = i + dir
+			if (j < 0 || j >= next.length) return prev
+			;[next[i], next[j]] = [next[j], next[i]]
+			return next
+		})
+	}
+
+	const toggleCar = (id: string) =>
+		setCarIds(prev => (prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]))
+
+	return (
+		<form onSubmit={form.handleSubmit(v => save.mutate(v))} className='mx-auto max-w-3xl pb-16'>
+			<div className='mb-6 flex items-center justify-between'>
+				<h1 className='text-2xl font-bold'>{isEdit ? 'Редагувати товар' : 'Новий товар'}</h1>
+				<div className='flex gap-2'>
+					<Button type='button' variant='ghost' onClick={() => router.push(UI_ROUTES.PRODUCTS)}>
+						Скасувати
+					</Button>
+					<Button type='submit' disabled={save.isPending || uploading}>
+						{save.isPending ? 'Збереження…' : 'Зберегти'}
+					</Button>
+				</div>
+			</div>
+
+			{/* Основне */}
+			<Section title='Основне'>
+				<div>
+					<Field label='Назва *' error={form.formState.errors.name?.message}>
+						<Input placeholder='Фара ліва Model 3 Highland' {...form.register('name')} />
+					</Field>
+					<div className='text-muted-foreground mt-1.5 flex items-center gap-1.5 text-xs'>
+						<span>URL:</span>
+						<code className='text-foreground bg-muted rounded px-1.5 py-0.5'>
+							/product/{slugPreview || '…'}
+						</code>
+						<InfoHint text='Адреса сторінки товару. Формується з назви автоматично, не змінюється при перейменуванні (SEO).' />
+					</div>
+				</div>
+
+				<div className='grid grid-cols-2 gap-4'>
+					<Field label='Артикул (SKU) *' error={form.formState.errors.sku?.message}>
+						<Input placeholder='TSL-1095-L' {...form.register('sku')} />
+					</Field>
+					<Field label='Категорія *' error={form.formState.errors.categoryId?.message}>
+						<Select {...form.register('categoryId')}>
+							<option value=''>— Оберіть —</option>
+							{categories?.map(c => (
+								<option key={c.id} value={c.id}>
+									{c.name}
+								</option>
+							))}
+						</Select>
+					</Field>
+				</div>
+
+				<div className='grid grid-cols-2 gap-4'>
+					<Field label='Тип'>
+						<Select {...form.register('type')}>
+							<option value='original'>Оригінал</option>
+							<option value='analog'>Аналог</option>
+						</Select>
+					</Field>
+					<Field label='Стан'>
+						<Select {...form.register('condition')}>
+							<option value='new'>Новий</option>
+							<option value='used'>Б/у</option>
+							<option value='clearance'>Уцінка</option>
+						</Select>
+					</Field>
+				</div>
+			</Section>
+
+			{/* Ціна та залишок */}
+			<Section title='Ціна та залишок'>
+				<div className='grid grid-cols-3 gap-4'>
+					<Field label='Ціна, ₴ *' error={form.formState.errors.price?.message}>
+						<Input type='number' step='0.01' min={0} {...form.register('price')} />
+					</Field>
+					<Field label='Стара ціна, ₴' hint='Для знижки'>
+						<Input type='number' step='0.01' min={0} {...form.register('oldPrice')} />
+					</Field>
+					<Field label='Залишок, шт' error={form.formState.errors.stockQty?.message}>
+						<Input type='number' min={0} {...form.register('stockQty')} />
+					</Field>
+				</div>
+				<label className='flex cursor-pointer items-center gap-2 text-sm'>
+					<input type='checkbox' className='h-4 w-4' {...form.register('inStock')} />
+					В наявності <span className='text-muted-foreground'>(зніми — «під замовлення»)</span>
+				</label>
+			</Section>
+
+			{/* Галерея */}
+			<Section title='Галерея'>
+				<div className='flex flex-wrap gap-3'>
+					{images.map((img, i) => (
+						<div key={i} className='border-border w-32 overflow-hidden rounded-xl border'>
+							<div className='bg-muted relative h-24 w-full'>
+								<Image src={img.url} alt={img.alt ?? ''} fill sizes='128px' className='object-cover' />
+								<button
+									type='button'
+									onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}
+									className='absolute right-1 top-1 rounded-md bg-black/60 p-1 text-white hover:bg-black/80'
+									aria-label='Видалити'
+								>
+									<X className='h-3.5 w-3.5' />
+								</button>
+							</div>
+							<Input
+								placeholder='alt'
+								value={img.alt ?? ''}
+								onChange={e =>
+									setImages(prev =>
+										prev.map((p, idx) => (idx === i ? { ...p, alt: e.target.value } : p))
+									)
+								}
+								className='h-8 rounded-none border-0 border-t text-xs'
+							/>
+							<div className='flex border-t'>
+								<button
+									type='button'
+									onClick={() => moveImage(i, -1)}
+									disabled={i === 0}
+									className='hover:bg-muted flex flex-1 justify-center py-1 disabled:opacity-30'
+								>
+									<ArrowUp className='h-3.5 w-3.5' />
+								</button>
+								<button
+									type='button'
+									onClick={() => moveImage(i, 1)}
+									disabled={i === images.length - 1}
+									className='hover:bg-muted flex flex-1 justify-center border-l py-1 disabled:opacity-30'
+								>
+									<ArrowDown className='h-3.5 w-3.5' />
+								</button>
+							</div>
+						</div>
+					))}
+					<label className='border-border hover:bg-muted flex h-[152px] w-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs'>
+						{uploading ? (
+							<Loader2 className='h-5 w-5 animate-spin' />
+						) : (
+							<ImageIcon className='h-5 w-5' />
+						)}
+						{uploading ? 'Завантаження…' : 'Додати фото'}
+						<input
+							type='file'
+							accept='image/jpeg,image/png,image/webp'
+							multiple
+							className='hidden'
+							onChange={onUpload}
+							disabled={uploading}
+						/>
+					</label>
+				</div>
+				<p className='text-muted-foreground text-xs'>Перше фото — головне. Конвертуються в AVIF.</p>
+			</Section>
+
+			{/* Сумісність */}
+			<Section title='Сумісність (підходить до)'>
+				<div className='flex flex-wrap gap-2'>
+					{cars?.map(car => {
+						const active = carIds.includes(car.id)
+						const label = car.generation ? `${car.model} · ${car.generation}` : car.model
+						return (
+							<button
+								key={car.id}
+								type='button'
+								onClick={() => toggleCar(car.id)}
+								className={
+									active
+										? 'bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-sm font-medium'
+										: 'border-border hover:bg-muted rounded-full border px-3 py-1.5 text-sm'
+								}
+							>
+								{label}
+							</button>
+						)
+					})}
+				</div>
+				{!carIds.length && (
+					<p className='text-muted-foreground text-xs'>Оберіть моделі, до яких підходить деталь.</p>
+				)}
+			</Section>
+
+			{/* Опис */}
+			<Section title='Опис'>
+				<RichTextEditor value={descJson} onChange={setDescJson} />
+			</Section>
+
+			{/* Характеристики */}
+			<Section title='Характеристики'>
+				<div className='flex flex-col gap-2'>
+					{attrs.map((row, i) => (
+						<div key={i} className='flex gap-2'>
+							<Input
+								placeholder='Назва (Сторона)'
+								value={row.key}
+								onChange={e =>
+									setAttrs(prev => prev.map((r, idx) => (idx === i ? { ...r, key: e.target.value } : r)))
+								}
+							/>
+							<Input
+								placeholder='Значення (ліва)'
+								value={row.value}
+								onChange={e =>
+									setAttrs(prev =>
+										prev.map((r, idx) => (idx === i ? { ...r, value: e.target.value } : r))
+									)
+								}
+							/>
+							<button
+								type='button'
+								onClick={() => setAttrs(prev => prev.filter((_, idx) => idx !== i))}
+								className='hover:bg-destructive/10 text-destructive shrink-0 rounded-md px-2'
+								aria-label='Видалити'
+							>
+								<Trash2 className='h-4 w-4' />
+							</button>
+						</div>
+					))}
+					<button
+						type='button'
+						onClick={() => setAttrs(prev => [...prev, { key: '', value: '' }])}
+						className='text-primary flex items-center gap-1 self-start text-sm font-medium'
+					>
+						<Plus className='h-4 w-4' /> Додати характеристику
+					</button>
+				</div>
+			</Section>
+
+			{/* Гарантія / Доставка */}
+			<Section title='Гарантія та доставка'>
+				<Field label='Гарантія'>
+					<Textarea placeholder='Напр. 12 місяців на оригінальні деталі' {...form.register('warranty')} />
+				</Field>
+				<Field label='Умови доставки та оплати'>
+					<Textarea placeholder='Нова Пошта, самовивіз…' {...form.register('deliveryTerms')} />
+				</Field>
+			</Section>
+
+			{/* SEO */}
+			<Section title='SEO'>
+				<Field label='Meta title'>
+					<Input placeholder='Фара Model 3 Highland — купити у Львові' {...form.register('seoTitle')} />
+				</Field>
+				<Field label='Meta description'>
+					<Textarea placeholder='Короткий опис для пошукової видачі' {...form.register('seoDescription')} />
+				</Field>
+			</Section>
+
+			<label className='flex cursor-pointer items-center gap-2 text-sm'>
+				<input type='checkbox' className='h-4 w-4' {...form.register('isActive')} />
+				Активний (показувати на сайті)
+			</label>
+		</form>
+	)
+}
+
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+	<section className='border-border mb-5 rounded-2xl border p-5'>
+		<h2 className='mb-4 text-sm font-bold uppercase tracking-wide'>{title}</h2>
+		<div className='flex flex-col gap-4'>{children}</div>
+	</section>
+)
+
+const Field = ({
+	label,
+	hint,
+	error,
+	children
+}: {
+	label: string
+	hint?: string
+	error?: string
+	children: React.ReactNode
+}) => (
+	<div>
+		<label className='mb-1.5 block text-sm font-medium'>{label}</label>
+		{children}
+		{hint && !error && <p className='text-muted-foreground mt-1 text-xs'>{hint}</p>}
+		{error && <p className='text-destructive mt-1 text-xs'>{error}</p>}
+	</div>
+)

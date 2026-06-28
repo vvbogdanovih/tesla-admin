@@ -1,1 +1,4 @@
 export * from './user.type'
+export * from './car.type'
+export * from './category.type'
+export * from './product.type'
