@@ -4,7 +4,7 @@ export const UI_ROUTES = {
 	PRODUCT_NEW: '/products/new',
 	PRODUCT_EDIT: (id: string) => `/products/${id}`,
 	CARS: '/cars',
-	SYSTEMS: '/systems',
+	CATEGORIES: '/categories',
 	ORDERS: '/orders',
 	LEADS: '/leads',
 	BLOG: '/blog',
@@ -21,7 +21,7 @@ export const NAV_ITEMS = [
 	{ label: 'Замовлення', href: UI_ROUTES.ORDERS, icon: Receipt },
 	{ label: 'Ліди', href: UI_ROUTES.LEADS, icon: Inbox },
 	{ label: 'Довідник авто', href: UI_ROUTES.CARS, icon: Car },
-	{ label: 'Системи', href: UI_ROUTES.SYSTEMS, icon: FolderTree },
+	{ label: 'Категорії', href: UI_ROUTES.CATEGORIES, icon: FolderTree },
 	{ label: 'Блог', href: UI_ROUTES.BLOG, icon: FileText },
 	{ label: 'Банери', href: UI_ROUTES.BANNERS, icon: Image },
 	{ label: 'Користувачі', href: UI_ROUTES.USERS, icon: Users }

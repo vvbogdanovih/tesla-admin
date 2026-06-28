@@ -18,9 +18,9 @@ export const API_URLS = {
 		BASE: `/cars`,
 		BY_ID: (id: string) => `/cars/${id}`
 	},
-	SYSTEMS: {
-		BASE: `/systems`,
-		BY_ID: (id: string) => `/systems/${id}`
+	CATEGORIES: {
+		BASE: `/categories`,
+		BY_ID: (id: string) => `/categories/${id}`
 	},
 	ORDERS: {
 		BASE: `/orders`,
