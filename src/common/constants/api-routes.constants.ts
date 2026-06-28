@@ -47,6 +47,10 @@ export const API_URLS = {
 		BASE: `/content-blocks`,
 		BY_KEY: (key: string) => `/content-blocks/${key}`
 	},
+	PAYMENT_REQUISITES: {
+		BASE: `/payment-requisites`,
+		BY_ID: (id: string) => `/payment-requisites/${id}`
+	},
 	UPLOAD: {
 		IMAGE: `/s3/upload`,
 		PRESIGN: `/s3/presign`

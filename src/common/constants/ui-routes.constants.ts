@@ -10,6 +10,7 @@ export const UI_ROUTES = {
 	BLOG: '/blog',
 	BANNERS: '/banners',
 	CONTENT: '/content',
+	REQUISITES: '/requisites',
 	USERS: '/users',
 	LOGIN: '/login'
 } as const
@@ -24,6 +25,7 @@ import {
 	FileText,
 	Image,
 	ScrollText,
+	CreditCard,
 	Users
 } from 'lucide-react'
 
@@ -37,5 +39,6 @@ export const NAV_ITEMS = [
 	{ label: 'Блог', href: UI_ROUTES.BLOG, icon: FileText },
 	{ label: 'Банери', href: UI_ROUTES.BANNERS, icon: Image },
 	{ label: 'Тексти сайту', href: UI_ROUTES.CONTENT, icon: ScrollText },
+	{ label: 'Реквізити', href: UI_ROUTES.REQUISITES, icon: CreditCard, superadminOnly: true },
 	{ label: 'Користувачі', href: UI_ROUTES.USERS, icon: Users }
 ] as const

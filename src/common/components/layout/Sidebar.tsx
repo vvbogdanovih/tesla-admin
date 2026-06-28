@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LogOut } from 'lucide-react'
 import { NAV_ITEMS, UI_ROUTES } from '@/common/constants'
+import { Role } from '@/common/constants/role.constants'
 import { useAuthStore } from '@/common/store/useAuthStore'
 import { cn } from '@/common/utils/shad-cn.utils'
 
@@ -13,6 +14,10 @@ export const Sidebar = () => {
 	const user = useAuthStore(s => s.user)
 	const logOut = useAuthStore(s => s.logOut)
 	const initial = (user?.firstName || user?.email || 'A').charAt(0).toUpperCase()
+	const isSuperadmin = user?.role === Role.SUPERADMIN
+	const navItems = NAV_ITEMS.filter(
+		item => !('superadminOnly' in item && item.superadminOnly) || isSuperadmin
+	)
 
 	const handleLogout = async () => {
 		await logOut()
@@ -29,7 +34,7 @@ export const Sidebar = () => {
 			</div>
 
 			<nav className='flex flex-1 flex-col gap-1 overflow-auto'>
-				{NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+				{navItems.map(({ label, href, icon: Icon }) => {
 					const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
 					return (
 						<Link
