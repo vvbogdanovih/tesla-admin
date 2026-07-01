@@ -8,6 +8,8 @@ export interface ProductImage {
 	url: string
 	alt?: string | null
 	sortOrder?: number
+	// true = «живі фото» (реальні знімки екземпляра); false/undefined = студійна галерея
+	isLive?: boolean
 }
 
 export interface ProductListItem {

@@ -31,6 +31,9 @@ export const API_URLS = {
 		BASE: `/leads`,
 		BY_ID: (id: string) => `/leads/${id}`
 	},
+	WISHLIST: {
+		ADMIN: `/admin/wishlist`
+	},
 	BLOG: {
 		BASE: `/blog`,
 		BY_ID: (id: string) => `/blog/${id}`

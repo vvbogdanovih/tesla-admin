@@ -85,8 +85,17 @@ export const ProductForm = ({ product }: { product?: ProductDetail }) => {
 		}
 	})
 
+	const toGallery = (im: { id?: string; url: string; alt?: string | null }): GalleryImage => ({
+		uid: im.id ?? newUid(),
+		url: im.url,
+		alt: im.alt ?? ''
+	})
 	const [images, setImages] = useState<GalleryImage[]>(
-		product?.images.map(im => ({ uid: im.id ?? newUid(), url: im.url, alt: im.alt ?? '' })) ?? []
+		product?.images.filter(im => !im.isLive).map(toGallery) ?? []
+	)
+	// «Живі фото» — окремий набір (isLive:true), реальні знімки екземпляра
+	const [livePhotos, setLivePhotos] = useState<GalleryImage[]>(
+		product?.images.filter(im => im.isLive).map(toGallery) ?? []
 	)
 	const [carIds, setCarIds] = useState<string[]>(product?.fitment.map(f => f.carId) ?? [])
 	const [descJson, setDescJson] = useState<JSONContent | null>(product?.descriptionJson ?? null)
@@ -123,6 +132,7 @@ export const ProductForm = ({ product }: { product?: ProductDetail }) => {
 					description: v.seoDescription?.trim() || undefined
 				},
 				images: images.map(i => ({ url: i.url, alt: i.alt.trim() || undefined })),
+				livePhotos: livePhotos.map(i => ({ url: i.url, alt: i.alt.trim() || undefined })),
 				carIds,
 				isActive: v.isActive
 			}
@@ -135,37 +145,25 @@ export const ProductForm = ({ product }: { product?: ProductDetail }) => {
 		}
 	})
 
-	const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const files = Array.from(e.target.files ?? [])
-		if (!files.length) return
-		setUploading(true)
-		try {
-			for (const file of files) {
-				const url = await uploadImage(file, 'products')
-				setImages(prev => [...prev, { uid: newUid(), url, alt: '' }])
+	// Фабрика аплоаду: завантажує файли в потрібний набір (галерея / живі фото)
+	const makeUpload =
+		(setList: React.Dispatch<React.SetStateAction<GalleryImage[]>>, prefix: string) =>
+		async (e: React.ChangeEvent<HTMLInputElement>) => {
+			const files = Array.from(e.target.files ?? [])
+			if (!files.length) return
+			setUploading(true)
+			try {
+				for (const file of files) {
+					const url = await uploadImage(file, prefix)
+					setList(prev => [...prev, { uid: newUid(), url, alt: '' }])
+				}
+			} catch (err) {
+				toast.error(err instanceof Error ? err.message : 'Помилка завантаження')
+			} finally {
+				setUploading(false)
+				e.target.value = ''
 			}
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Помилка завантаження')
-		} finally {
-			setUploading(false)
-			e.target.value = ''
 		}
-	}
-
-	// drag-and-drop переупорядкування галереї (@dnd-kit)
-	const sensors = useSensors(
-		useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-	)
-	const onDragEnd = (e: DragEndEvent) => {
-		const { active, over } = e
-		if (!over || active.id === over.id) return
-		setImages(prev => {
-			const from = prev.findIndex(i => i.uid === active.id)
-			const to = prev.findIndex(i => i.uid === over.id)
-			return from === -1 || to === -1 ? prev : arrayMove(prev, from, to)
-		})
-	}
 
 	const toggleCar = (id: string) => {
 		setFitmentError(false)
@@ -299,42 +297,25 @@ export const ProductForm = ({ product }: { product?: ProductDetail }) => {
 
 			{/* Галерея */}
 			<Section title='Галерея'>
-				<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-					<SortableContext items={images.map(i => i.uid)} strategy={rectSortingStrategy}>
-						<div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
-							{images.map((img, i) => (
-								<SortableImageCard
-									key={img.uid}
-									img={img}
-									isMain={i === 0}
-									onRemove={() => setImages(prev => prev.filter(p => p.uid !== img.uid))}
-									onAlt={alt =>
-										setImages(prev => prev.map(p => (p.uid === img.uid ? { ...p, alt } : p)))
-									}
-								/>
-							))}
-							<label className='border-border hover:bg-muted flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs'>
-								{uploading ? (
-									<Loader2 className='h-5 w-5 animate-spin' />
-								) : (
-									<ImageIcon className='h-5 w-5' />
-								)}
-								{uploading ? 'Завантаження…' : 'Додати фото'}
-								<input
-									type='file'
-									accept='image/jpeg,image/png,image/webp'
-									multiple
-									className='hidden'
-									onChange={onUpload}
-									disabled={uploading}
-								/>
-							</label>
-						</div>
-					</SortableContext>
-				</DndContext>
-				<p className='text-muted-foreground text-xs'>
-					Перетягни фото, щоб змінити порядок. Перше — головне. Конвертуються в AVIF.
-				</p>
+				<ImageGrid
+					items={images}
+					setItems={setImages}
+					uploading={uploading}
+					onUpload={makeUpload(setImages, 'products')}
+					showMain
+					hint='Перетягни фото, щоб змінити порядок. Перше — головне. Конвертуються в AVIF.'
+				/>
+			</Section>
+
+			{/* Живі фото — реальні знімки екземпляра (окремий блок на сторінці товару) */}
+			<Section title='Живі фото'>
+				<ImageGrid
+					items={livePhotos}
+					setItems={setLivePhotos}
+					uploading={uploading}
+					onUpload={makeUpload(setLivePhotos, 'products/live')}
+					hint='Реальні знімки саме цього товару («як на складі»). Показуються окремим блоком під галереєю — лише якщо є хоча б одне фото. Конвертуються в AVIF.'
+				/>
 			</Section>
 
 			{/* Сумісність */}
@@ -434,6 +415,75 @@ export const ProductForm = ({ product }: { product?: ProductDetail }) => {
 			</Section>
 			</div>
 		</form>
+	)
+}
+
+// Сітка зображень із drag-and-drop сортуванням + аплоадом (спільна для галереї та живих фото)
+const ImageGrid = ({
+	items,
+	setItems,
+	uploading,
+	onUpload,
+	hint,
+	showMain = false
+}: {
+	items: GalleryImage[]
+	setItems: React.Dispatch<React.SetStateAction<GalleryImage[]>>
+	uploading: boolean
+	onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+	hint: string
+	showMain?: boolean
+}) => {
+	const sensors = useSensors(
+		useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+	)
+	const onDragEnd = (e: DragEndEvent) => {
+		const { active, over } = e
+		if (!over || active.id === over.id) return
+		setItems(prev => {
+			const from = prev.findIndex(i => i.uid === active.id)
+			const to = prev.findIndex(i => i.uid === over.id)
+			return from === -1 || to === -1 ? prev : arrayMove(prev, from, to)
+		})
+	}
+	return (
+		<>
+			<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+				<SortableContext items={items.map(i => i.uid)} strategy={rectSortingStrategy}>
+					<div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
+						{items.map((img, i) => (
+							<SortableImageCard
+								key={img.uid}
+								img={img}
+								isMain={showMain && i === 0}
+								onRemove={() => setItems(prev => prev.filter(p => p.uid !== img.uid))}
+								onAlt={alt =>
+									setItems(prev => prev.map(p => (p.uid === img.uid ? { ...p, alt } : p)))
+								}
+							/>
+						))}
+						<label className='border-border hover:bg-muted flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs'>
+							{uploading ? (
+								<Loader2 className='h-5 w-5 animate-spin' />
+							) : (
+								<ImageIcon className='h-5 w-5' />
+							)}
+							{uploading ? 'Завантаження…' : 'Додати фото'}
+							<input
+								type='file'
+								accept='image/jpeg,image/png,image/webp'
+								multiple
+								className='hidden'
+								onChange={onUpload}
+								disabled={uploading}
+							/>
+						</label>
+					</div>
+				</SortableContext>
+			</DndContext>
+			<p className='text-muted-foreground text-xs'>{hint}</p>
+		</>
 	)
 }
 

@@ -22,6 +22,7 @@ export interface ProductPayload {
 	attributes?: Record<string, string>
 	seo?: { title?: string; description?: string }
 	images?: { url: string; alt?: string }[]
+	livePhotos?: { url: string; alt?: string }[]
 	carIds?: string[]
 	isActive?: boolean
 }
