@@ -9,8 +9,10 @@ export interface PaymentRequisitePayload {
 	bankName?: string
 	liqpayPublicKey?: string
 	liqpayPrivateKey?: string
+	monopayToken?: string
 	ibanActive?: boolean
 	liqpayActive?: boolean
+	monopayActive?: boolean
 }
 
 export const paymentRequisitesApi = {

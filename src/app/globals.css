@@ -75,3 +75,54 @@ body {
 	color: var(--foreground);
 	font-family: var(--font-onest), system-ui, sans-serif;
 }
+
+/*
+ * Стилі контенту TipTap-редактора. Tailwind v4 preflight скидає типографіку
+ * (розміри заголовків, маркери списків), тож відновлюємо її для .ProseMirror.
+ * Значення 1:1 дзеркалять .rich у tesla-frontend, щоб редактор був точним
+ * превʼю опублікованого результату (набір елементів = StarterKit, ADR-0006).
+ */
+.ProseMirror {
+	color: var(--foreground);
+	line-height: 1.7;
+}
+.ProseMirror h2 {
+	font-size: 1.25rem;
+	font-weight: 700;
+	margin: 1.25rem 0 0.5rem;
+}
+.ProseMirror h3 {
+	font-size: 1.1rem;
+	font-weight: 600;
+	margin: 1rem 0 0.5rem;
+}
+.ProseMirror p {
+	margin: 0.5rem 0;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+	margin: 0.5rem 0;
+	padding-left: 1.25rem;
+}
+.ProseMirror ul {
+	list-style: disc;
+}
+.ProseMirror ol {
+	list-style: decimal;
+}
+.ProseMirror li {
+	margin: 0.25rem 0;
+}
+.ProseMirror li > p {
+	margin: 0;
+}
+.ProseMirror a {
+	color: var(--accent-text);
+	text-decoration: underline;
+}
+.ProseMirror blockquote {
+	border-left: 3px solid var(--border);
+	padding-left: 1rem;
+	color: var(--muted-foreground);
+	margin: 0.75rem 0;
+}

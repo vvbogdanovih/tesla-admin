@@ -9,9 +9,10 @@ export const requisiteSchema = z.object({
 	iban: z.string().optional(),
 	bankName: z.string().optional(),
 	liqpayPublicKey: z.string().optional(),
-	// порожнє при редагуванні = не змінювати ключ
-	liqpayPrivateKey: z.string().optional()
-	// активність каналів (ibanActive/liqpayActive) керується лише кнопками у списку
+	// порожнє при редагуванні = не змінювати ключ/токен
+	liqpayPrivateKey: z.string().optional(),
+	monopayToken: z.string().optional()
+	// активність каналів керується лише кнопками у списку
 })
 
 export type RequisiteValues = z.infer<typeof requisiteSchema>

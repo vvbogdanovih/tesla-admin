@@ -20,6 +20,7 @@ import type { PaymentRequisite } from '@/common/types/payment-requisite.type'
 // Повнота каналу (умова активації) — дзеркало бекенду
 const ibanComplete = (r: PaymentRequisite) => !!(r.label && r.taxId && r.iban && r.bankName)
 const liqpayComplete = (r: PaymentRequisite) => !!(r.liqpayPublicKey && r.liqpayPrivateKeySet)
+const monopayComplete = (r: PaymentRequisite) => r.monopayTokenSet
 
 const EMPTY: RequisiteValues = {
 	label: '',
@@ -27,7 +28,8 @@ const EMPTY: RequisiteValues = {
 	iban: '',
 	bankName: '',
 	liqpayPublicKey: '',
-	liqpayPrivateKey: ''
+	liqpayPrivateKey: '',
+	monopayToken: ''
 }
 
 export default function RequisitesPage() {
@@ -59,7 +61,8 @@ export default function RequisitesPage() {
 			iban: r.iban ?? '',
 			bankName: r.bankName ?? '',
 			liqpayPublicKey: r.liqpayPublicKey ?? '',
-			liqpayPrivateKey: ''
+			liqpayPrivateKey: '',
+			monopayToken: ''
 		})
 		setOpen(true)
 	}
@@ -74,6 +77,7 @@ export default function RequisitesPage() {
 				liqpayPublicKey: v.liqpayPublicKey?.trim() || undefined
 			}
 			if (v.liqpayPrivateKey?.trim()) payload.liqpayPrivateKey = v.liqpayPrivateKey.trim()
+			if (v.monopayToken?.trim()) payload.monopayToken = v.monopayToken.trim()
 			return editing
 				? paymentRequisitesApi.update(editing.id, payload)
 				: paymentRequisitesApi.create(payload)
@@ -116,7 +120,7 @@ export default function RequisitesPage() {
 				<div>
 					<h1 className='text-2xl font-bold'>Реквізити</h1>
 					<p className='text-muted-foreground text-sm'>
-						Канали прийому коштів: оплата за IBAN та LiqPay (активний — один на канал)
+						Канали прийому коштів: IBAN, LiqPay, Monopay (активний — один на канал)
 					</p>
 				</div>
 				<Button onClick={openCreate}>
@@ -147,7 +151,8 @@ export default function RequisitesPage() {
 								<div className='text-muted-foreground mt-1 flex items-center gap-1 text-xs'>
 									<Lock className='h-3 w-3' />
 									LiqPay: public {r.liqpayPublicKey ? '✓' : '—'}, private{' '}
-									{r.liqpayPrivateKeySet ? '✓' : '—'}
+									{r.liqpayPrivateKeySet ? '✓' : '—'} · Monopay: токен{' '}
+									{r.monopayTokenSet ? '✓' : '—'}
 								</div>
 
 								{/* Канали: статус або кнопка активації */}
@@ -166,6 +171,14 @@ export default function RequisitesPage() {
 										complete={liqpayComplete(r)}
 										hint='Вкажіть public та private ключі'
 										onActivate={() => setActive.mutate({ id: r.id, patch: { liqpayActive: true } })}
+										pending={setActive.isPending}
+									/>
+									<ChannelControl
+										title='Monopay'
+										active={r.monopayActive}
+										complete={monopayComplete(r)}
+										hint='Вкажіть токен monobank'
+										onActivate={() => setActive.mutate({ id: r.id, patch: { monopayActive: true } })}
 										pending={setActive.isPending}
 									/>
 								</div>
@@ -236,6 +249,27 @@ export default function RequisitesPage() {
 								/>
 							</Field>
 						</div>
+					</div>
+
+					<div className='border-border mt-1 border-t pt-4'>
+						<p className='text-muted-foreground mb-3 flex items-center gap-1 text-xs font-medium uppercase'>
+							<Lock className='h-3 w-3' /> Monopay (monobank)
+						</p>
+						<Field
+							label='Токен'
+							hint={
+								editing?.monopayTokenSet
+									? 'Токен збережено. Лишіть порожнім, щоб не змінювати.'
+									: 'Токен (X-Token) із кабінету monobank-еквайрингу. Зберігається зашифровано.'
+							}
+						>
+							<Input
+								type='password'
+								autoComplete='new-password'
+								placeholder={editing?.monopayTokenSet ? '••••••••' : 'u… (X-Token)'}
+								{...form.register('monopayToken')}
+							/>
+						</Field>
 					</div>
 
 					<div className='mt-2 flex justify-end gap-2'>

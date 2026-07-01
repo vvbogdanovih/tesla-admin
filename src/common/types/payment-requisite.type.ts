@@ -6,8 +6,10 @@ export interface PaymentRequisite {
 	bankName: string | null
 	liqpayPublicKey: string | null
 	liqpayPrivateKeySet: boolean
+	monopayTokenSet: boolean
 	ibanActive: boolean
 	liqpayActive: boolean
+	monopayActive: boolean
 	createdAt: string
 	updatedAt: string
 }
